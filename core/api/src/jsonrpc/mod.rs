@@ -20,6 +20,8 @@ use crate::jsonrpc::web3_types::{
 use crate::jsonrpc::ws_subscription::{ws_subscription_module, HexIdProvider};
 use crate::APIError;
 
+use self::web3_types::BlockParameter;
+
 type RpcResult<T> = Result<T, Error>;
 
 #[rpc(server)]
@@ -61,7 +63,7 @@ pub trait AxonWeb3Rpc {
     async fn get_block_transaction_count_by_number(&self, number: BlockId) -> RpcResult<U256>;
 
     #[method(name = "eth_getBalance")]
-    async fn get_balance(&self, address: H160, number: Option<BlockId>) -> RpcResult<U256>;
+    async fn get_balance(&self, address: H160, parameter: Option<BlockParameter>) -> RpcResult<U256>;
 
     #[method(name = "eth_call")]
     async fn call(&self, req: Web3CallRequest, number: Option<BlockId>) -> RpcResult<Hex>;

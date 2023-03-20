@@ -336,6 +336,23 @@ pub struct Web3CallRequest {
     pub max_priority_fee_per_gas: Option<U256>,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub enum BlockParameter {
+  Specifier(BlockSpecifier),
+  Id(BlockId),
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+pub struct BlockSpecifier {
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub block_number: Option<u64>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub block_hash: Option<H256>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub require_canonical: Option<bool>,
+}
+
 #[derive(Default, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum BlockId {
     Num(u64),

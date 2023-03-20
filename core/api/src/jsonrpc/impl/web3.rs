@@ -13,7 +13,7 @@ use protocol::{async_trait, codec::ProtocolCodec, ProtocolResult};
 
 use crate::jsonrpc::web3_types::{
     BlockId, RichTransactionOrHash, Web3Block, Web3CallRequest, Web3FeeHistory, Web3Filter,
-    Web3Log, Web3Receipt, Web3Transaction,
+    Web3Log, Web3Receipt, Web3Transaction, BlockParameter,
 };
 use crate::jsonrpc::{error::RpcError, AxonWeb3RpcServer, RpcResult};
 use crate::APIError;
@@ -64,6 +64,32 @@ impl<Adapter: APIAdapter> Web3RpcImpl<Adapter> {
                 mock_header.into(),
             )
             .await
+    }
+
+    async fn get_block_number(&self, parameter: Option<BlockParameter>) -> Option<BlockId> {
+        if parameter.is_none() {
+          return None;
+        }
+        let param = parameter.unwrap();
+        match param {
+            BlockParameter::Id(id) => Some(id),
+            BlockParameter::Specifier(specifier) => {
+                if let Some(block_hash) = specifier.block_hash {
+                    let block = self
+                      .adapter
+                      .get_block_by_hash(Context::new(), block_hash)
+                      .await
+                      .unwrap();
+                    if let Some(b) = block {
+                      return Some(BlockId::Num(b.header.number));
+                    }
+                }
+                if let Some(block_number) = specifier.block_number {
+                    return Some(BlockId::Num(block_number));
+                }
+                None
+            }
+        }
     }
 }
 
@@ -270,7 +296,9 @@ impl<Adapter: APIAdapter + 'static> AxonWeb3RpcServer for Web3RpcImpl<Adapter> {
     }
 
     #[metrics_rpc("eth_getBalance")]
-    async fn get_balance(&self, address: H160, number: Option<BlockId>) -> RpcResult<U256> {
+    async fn get_balance(&self, address: H160, parameter: Option<BlockParameter>) -> RpcResult<U256> {
+        let number = self.get_block_number(parameter).await;
+
         Ok(self
             .adapter
             .get_account(Context::new(), address, number.unwrap_or_default().into())
