@@ -260,8 +260,9 @@ impl<Adapter: APIAdapter + 'static> AxonWeb3RpcServer for Web3RpcImpl<Adapter> {
     async fn get_transaction_count(
         &self,
         address: H160,
-        number: Option<BlockId>,
+        parameter: Option<BlockParameter>,
     ) -> RpcResult<U256> {
+        let number = self.get_block_number(parameter).await;
         match number.unwrap_or_default() {
             BlockId::Pending => {
                 let pending_tx_count = self
@@ -307,7 +308,7 @@ impl<Adapter: APIAdapter + 'static> AxonWeb3RpcServer for Web3RpcImpl<Adapter> {
     }
 
     #[metrics_rpc("eth_call")]
-    async fn call(&self, req: Web3CallRequest, number: Option<BlockId>) -> RpcResult<Hex> {
+    async fn call(&self, req: Web3CallRequest, parameter: Option<BlockParameter>) -> RpcResult<Hex> {
         if req.gas_price.unwrap_or_default() > U256::from(u64::MAX) {
             return Err(Error::Custom("The gas price is too large".to_string()));
         }
@@ -321,6 +322,7 @@ impl<Adapter: APIAdapter + 'static> AxonWeb3RpcServer for Web3RpcImpl<Adapter> {
             .as_ref()
             .map(|hex| hex.as_bytes())
             .unwrap_or_default();
+        let number = self.get_block_number(parameter).await;
         let resp = self
             .call_evm(req, data_bytes, number.unwrap_or_default().into())
             .await
@@ -370,7 +372,8 @@ impl<Adapter: APIAdapter + 'static> AxonWeb3RpcServer for Web3RpcImpl<Adapter> {
     }
 
     #[metrics_rpc("eth_getCode")]
-    async fn get_code(&self, address: H160, number: Option<BlockId>) -> RpcResult<Hex> {
+    async fn get_code(&self, address: H160, parameter: Option<BlockParameter>) -> RpcResult<Hex> {
+        let number = self.get_block_number(parameter).await;
         let account = self
             .adapter
             .get_account(Context::new(), address, number.unwrap_or_default().into())
@@ -730,8 +733,10 @@ impl<Adapter: APIAdapter + 'static> AxonWeb3RpcServer for Web3RpcImpl<Adapter> {
         &self,
         address: H160,
         position: U256,
-        number: Option<BlockId>,
+        parameter: Option<BlockParameter>,
     ) -> RpcResult<Hex> {
+        let number = self.get_block_number(parameter).await;
+
         let block = self
             .adapter
             .get_block_by_number(Context::new(), number.unwrap_or_default().into())
